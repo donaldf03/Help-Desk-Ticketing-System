@@ -47,7 +47,7 @@ with tab1:
 with tab2:
     st.subheader("Manage Tickets")
 
-    if len(st.session_state.tickets) == 0:
+    if len(st.session_state.tickets) == 1:
         st.warning("No tickets yet")
     else:
         edited = st.data_editor(
