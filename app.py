@@ -1,25 +1,44 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import os
 
 # Page setup
 st.set_page_config(page_title="Help Desk System", page_icon="🛠️")
 st.title("🛠️ Simple Help Desk Ticket System")
 
-# CREATE STORAGE (keeps tickets)
-if "tickets" not in st.session_state:
-    st.session_state.tickets = pd.DataFrame(columns=[
+# FILE STORAGE
+FILE = "tickets.csv"
+
+# LOAD DATA
+if os.path.exists(FILE):
+    tickets_df = pd.read_csv(FILE)
+else:
+    tickets_df = pd.DataFrame(columns=[
         "ID", "Issue", "Priority", "Status", "Assigned To", "Date"
     ])
 
-# FUNCTION TO MAKE NEW ID
-def make_ticket_id():
-    return f"TICKET-{len(st.session_state.tickets) + 1}"
+# SESSION STATE
+if "tickets" not in st.session_state:
+    st.session_state.tickets = tickets_df
 
-# TABS (like your workflow)
+
+# MAKE TICKET ID (always increments correctly)
+def make_ticket_id():
+    if st.session_state.tickets.empty:
+        return "TICKET-1"
+
+    ids = st.session_state.tickets["ID"].astype(str)
+    nums = ids.str.extract(r"(\d+)")[0].astype(float)
+
+    next_id = int(nums.max() + 1) if not nums.isna().all() else 1
+    return f"TICKET-{next_id}"
+
+
+# TABS
 tab1, tab2 = st.tabs(["Submit Ticket", "Manage Tickets"])
 
-# TAB 1 - SUBMIT TICKET
+# TAB 1 - SUBMIT
 with tab1:
     st.subheader("Submit a Ticket")
 
@@ -27,27 +46,34 @@ with tab1:
     priority = st.selectbox("Priority", ["Low", "Medium", "High"])
 
     if st.button("Submit Ticket"):
-        new_ticket = {
-            "ID": make_ticket_id(),
-            "Issue": issue,
-            "Priority": priority,
-            "Status": "Open",
-            "Assigned To": "Not Assigned",
-            "Date": datetime.now().strftime("%m-%d-%Y")
-        }
+        if issue.strip() == "":
+            st.error("Please enter an issue description")
+        else:
+            new_ticket = {
+                "ID": make_ticket_id(),
+                "Issue": issue,
+                "Priority": priority,
+                "Status": "Open",
+                "Assigned To": "Not Assigned",
+                "Date": datetime.now().strftime("%m-%d-%Y")
+            }
 
-        st.session_state.tickets = pd.concat(
-            [st.session_state.tickets, pd.DataFrame([new_ticket])],
-            ignore_index=True
-        )
+            st.session_state.tickets = pd.concat(
+                [st.session_state.tickets, pd.DataFrame([new_ticket])],
+                ignore_index=True
+            )
 
-        st.success("Ticket submitted!")
+            # SAVE
+            st.session_state.tickets.to_csv(FILE, index=False)
 
-# TAB 2 - TECHNICIAN VIEW
+            st.success("Ticket submitted!")
+
+
+# TAB 2 - MANAGE
 with tab2:
     st.subheader("Manage Tickets")
 
-    if len(st.session_state.tickets) == 1:
+    if st.session_state.tickets.empty:
         st.warning("No tickets yet")
     else:
         edited = st.data_editor(
@@ -55,12 +81,12 @@ with tab2:
             use_container_width=True
         )
 
-        # Save changes
         if st.button("Save Updates"):
             st.session_state.tickets = edited
+            st.session_state.tickets.to_csv(FILE, index=False)
             st.success("Updated!")
 
-        # SIMPLE DASHBOARD
+        # DASHBOARD
         st.subheader("Dashboard")
 
         open_count = len(edited[edited["Status"] == "Open"])
@@ -68,7 +94,6 @@ with tab2:
         closed_count = len(edited[edited["Status"] == "Closed"])
 
         col1, col2, col3 = st.columns(3)
-
         col1.metric("Open", open_count)
         col2.metric("In Progress", progress_count)
         col3.metric("Closed", closed_count)
