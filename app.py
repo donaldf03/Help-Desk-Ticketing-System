@@ -5,7 +5,7 @@ import os
 
 # Page setup
 st.set_page_config(page_title="Help Desk System", page_icon="🛠️")
-st.title("🛠️ Simple Help Desk Ticket System")
+st.title("🛠️ Help Desk Ticket System")
 
 # FILE STORAGE
 FILE = "tickets.csv"
@@ -23,7 +23,7 @@ if "tickets" not in st.session_state:
     st.session_state.tickets = tickets_df
 
 
-# MAKE TICKET ID (always increments correctly)
+# MAKE TICKET ID 
 def make_ticket_id():
     if st.session_state.tickets.empty:
         return "TICKET-1"
@@ -36,7 +36,7 @@ def make_ticket_id():
 
 
 # TABS
-tab1, tab2 = st.tabs(["Submit Ticket", "Manage Tickets"])
+tab1, tab2 = st.tabs(["Submit Ticket", "View Submitted Tickets"])
 
 # TAB 1 - SUBMIT
 with tab1:
